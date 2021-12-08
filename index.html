@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Beispiel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Hello</h1>
+    <input id="from" type="datetime-local" value="2020-01-01T00:00" />
+    <input id="to" type="datetime-local" value="2020-01-31T23:59" />
+    <button id="mybutton" onclick="showdata()">Fill Table</button>
+    <button id="mybutton2" onclick="clearTable()">Clear Table</button>
+    <table id="mytable"></table>
+
+    <script type="text/javascript">
+        function showdata() {
+
+            var startDate = new Date(document.getElementById("from").value);
+            var endDate = new Date(document.getElementById("to").value);
+
+            var start = startDate.toISOString().substring(0, 10);
+            var end = endDate.toISOString().substring(0, 10);
+
+            var url = "https://api.coinpaprika.com/v1/coins/btc-bitcoin/ohlcv/historical?start=" + start + "&end=" + end;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.send();
+            xhr.onreadystatechange = function() {
+
+                if (xhr.readyState == 4 && xhr.status == "200") {
+
+                    var jsonobj = JSON.parse(xhr.responseText);
+                    var cnt = 0;
+                    var min = 100000;
+                    var max = -100000;
+                    var sum = 0;
+                    var table = document.getElementById("mytable");
+
+                    createTHead();
+
+                    for (var i = 0; i < jsonobj.length; i++) {
+
+                        var t = new Date(jsonobj[i].time_close);
+                        var numOfWeekDay = t.getDay();
+
+                        if (numOfWeekDay == 0 || i == jsonobj.length - 1) {
+
+                            if (min != 100000 && max != -100000) {
+
+                                var numOfWeek = getNumOfWeek(t);
+                                var cellvalue = parseInt(table.rows[table.rows.length - 1].cells[0].innerHTML);
+
+                                if (numOfWeek == cellvalue) {
+                                    numOfWeek += 1;
+                                }
+                                createTRow(numOfWeek, min, sum / cnt, max);
+                            }
+
+                            sum = 0;
+                            cnt = 0;
+                            var min = 100000;
+                            var max = -100000;
+
+                        } else {
+
+                            var avgDay = (jsonobj[i].low + jsonobj[i].high) / 2;
+
+                            if (max < avgDay) {
+                                max = avgDay;
+                            }
+                            if (min > avgDay) {
+                                min = avgDay;
+                            }
+                            sum += avgDay;
+                            cnt++;
+
+                        }
+                    }
+                }
+            }
+        }
+
+        // get weeknumber from date 
+        function getNumOfWeek(dt) {
+
+            var start = new Date(dt.getFullYear(), 0, 1);
+            var diff = new Date(dt - start);
+            var oneDay = 1000 * 60 * 60 * 24;
+            var dayOfYear = Math.ceil(diff / oneDay);
+            return Math.ceil(dayOfYear / 7);
+
+        }
+
+        // clear the table
+        function clearTable() {
+
+            var table = document.getElementById("mytable");
+
+            if (table.rows.length > 0) {
+                while (table.rows.length > 1) {
+                    table.deleteRow(1);
+                }
+            } else {
+                alert("No table!")
+            }
+        }
+
+        // functions for creating the table part by part
+        function createTHead() {
+
+            var table = document.getElementById("mytable");
+
+            while (table.rows.length > 0) {
+                table.deleteRow(0);
+            }
+
+            var row = table.insertRow();
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            cell1.innerHTML = "Kalenderwoche";
+            cell2.innerHTML = "Min";
+            cell3.innerHTML = "Avg.";
+            cell4.innerHTML = "Max";
+        }
+
+        function createTRow(numOfWeek, min, avg, max) {
+
+            var table = document.getElementById("mytable");
+            var row = table.insertRow();
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            cell1.innerHTML = numOfWeek;
+            cell2.innerHTML = min.toFixed(2);
+            cell3.innerHTML = avg.toFixed(2);
+            cell4.innerHTML = max.toFixed(2);
+        }
+    </script>
+</body>
+
+</html>
